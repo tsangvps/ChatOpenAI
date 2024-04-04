@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Form</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .chat-container {
+            max-width: 400px;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+        }
+
+        .chat-header {
+            background-color: #4CAF50;
+            color: #fff;
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .user-message,
+        .bot-message {
+            background-color: #4CAF50;
+            color: #fff;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: #0084FF;
+        }
+
+        .message-input {
+            border: none;
+            padding: 15px;
+            font-size: 16px;
+            outline: none;
+            width: calc(100% - 30px);
+            border-top: 1px solid #ccc;
+            margin-top: auto;
+        }
+
+        .send-button {
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            padding: 15px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="chat-header">ChatGPT Chat</div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <input type="text" value="-1" id="user-phien" hidden>
+        <input type="text" class="message-input" id="user-input" placeholder="Type a message...">
+        <button class="send-button" onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        let sendingMessage = false; // Biến cờ để theo dõi trạng thái gửi tin nhắn
+        let sendDelay = 10000;
+        const eventSource = new EventSource('/sse');
+        eventSource.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            const messageId = `message-${data.id}`; // Tạo ID duy nhất cho tin nhắn
+
+            const existingMessage = document.getElementById(messageId);
+            const phienID = document.getElementById('user-phien');
+            if (data.phien) {
+                phienID.setAttribute('value', data.phien);
+            }
+            if (existingMessage) {
+                const phienID = document.getElementById('user-phien');
+                const botContent = existingMessage.querySelector('.bot-message-content');
+                if (botContent) {
+                    botContent.innerHTML = `${data.message}`;
+                }
+                const chatMessages = document.getElementById('chat-messages');
+
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } else {
+                appendMessage('OpenAI', data.message, 'bot-message', 'ChatGPT', messageId);
+            }
+        };
+
+        function sendMessage() {
+            if (sendingMessage) {
+                alert('Mỗi Tin cách nhau tối thiểu 10s');
+                return; // Nếu đang gửi tin nhắn, không cho phép thực hiện thêm
+            }
+            const userMessage = document.getElementById('user-input');
+            const phien = document.getElementById('user-phien');
+            const phienValue = phien.value;
+            const messageValue = userMessage.value;
+            const id_bot = 'Chat-' + Date.now();
+
+            if (messageValue.trim() !== '') {
+                appendMessage('You', messageValue, 'user-message', 'ChatGPT', id_bot);
+                sendingMessage = true;
+                sendMessageToServer(messageValue, phienValue, id_bot, 'ChatGPT');
+                userMessage.value = '';
+            }
+            setTimeout(() => {
+                sendingMessage = false;
+            }, sendDelay);
+        }
+
+
+        async function sendMessageToServer(message, Phien, id, name) {
+            try {
+                const response = await fetch('/send_message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message, id: id, phien: Phien }),
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to send message');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error.message);
+            }
+        }
+        function sendMessageToServer(message, Phien, id, name) {
+            fetch('/send_message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: message, id: id, phien: Phien }),
+            })
+        }
+
+        function appendMessage(sender, message, type, bot, messageId) {
+            const chatMessages = document.getElementById('chat-messages');
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            const messageDiv = document.createElement('div');
+            messageDiv.id = messageId;
+            messageDiv.classList.add(type);
+
+            // Nếu tin nhắn được thêm là tin nhắn bot, tạo phần tử mới cho nó
+            if (type === 'bot-message') {
+                messageDiv.innerHTML = `<strong>${sender}:</strong> <span class="bot-message-content">${message}</span>`;
+            } else {
+                messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            }
+
+            chatMessages.appendChild(messageDiv);
+
+            // Cuộn xuống cuối cùng của cuộc trò chuyện
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    </script>
+</body>
+
+</html>
