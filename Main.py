@@ -61,7 +61,6 @@ def NewChat_ChatGPT(message: str, id):
     })
     with POST_CURL('https://chat.openai.com/backend-api/conversation', reqHeaders, reqBody) as response:
         for line in response.iter_lines(decode_unicode=True):
-            # print(f'{user_token}')
             if line.startswith("data: "):
                 try:
                     data = json.loads(line.lstrip("data: "))
@@ -75,7 +74,7 @@ def NewChat_ChatGPT(message: str, id):
                         parts = data["message"]["content"]["parts"]
                         sse.publish({"phien": data["conversation_id"], "id": id, "message": parts}, type='message')
                 except json.JSONDecodeError as e:
-                    print(e)
+                    print("a"+e)
             else:
                 try:
                     detail = json.loads(line)['detail']
@@ -84,8 +83,7 @@ def NewChat_ChatGPT(message: str, id):
                         NewChat_ChatGPT(message, id)
                         return
                 except json.decoder.JSONDecodeError as e:
-                    sse.publish({"id": id, "message": 'Vui Lòng Thử Lại'}, type='message')
-                    
+                    print('')
 
 def Chat_ChatGPT(message: str, id, phien):
     global user_token
@@ -119,33 +117,33 @@ def Chat_ChatGPT(message: str, id, phien):
         "force_paragen_model_slug": "",
         "force_nulligen": False,
         "force_rate_limit": False,
-        "websocket_request_id": "67845c66-bb50-4a83-be89-51aa7d79a5dd"
     })
     with POST_CURL('https://chat.openai.com/backend-api/conversation', reqHeaders, reqBody) as response:
         for line in response.iter_lines(decode_unicode=True):
-                if line.startswith("data: "):
-                    try:
-                        data = json.loads(line.lstrip("data: "))
-                        if (
-                            data
-                            and "message" in data
-                            and data["message"] is not None
-                            and "content" in data["message"]
-                            and "parts" in data["message"]["content"]
-                        ):
-                            parts = data["message"]["content"]["parts"]
-                            sse.publish({"phien": data["conversation_id"], "id": id, "message": parts}, type='message')
-                    except json.JSONDecodeError as e:
-                        print(e)
-                else:
-                    try:
-                        detail = json.loads(line)['detail']
-                        if detail:
-                            user_token = getToken()
-                            Chat_ChatGPT(message, id, phien)
-                            return
-                    except json.decoder.JSONDecodeError as e:
-                        sse.publish({"id": id, "message": 'Vui Lòng Thử Lại'}, type='message')
+            print(line)
+            if line.startswith("data: "):
+                try:
+                    data = json.loads(line.lstrip("data: "))
+                    if (
+                        data
+                        and "message" in data
+                        and data["message"] is not None
+                        and "content" in data["message"]
+                        and "parts" in data["message"]["content"]
+                    ):
+                        parts = data["message"]["content"]["parts"]
+                        sse.publish({"phien": data["conversation_id"], "id": id, "message": parts}, type='message')
+                except json.JSONDecodeError as e:
+                    print(e)
+            else:
+                try:
+                    detail = json.loads(line)['detail']
+                    if detail:
+                        user_token = getToken()
+                        Chat_ChatGPT(message, id, phien)
+                        return
+                except json.decoder.JSONDecodeError as e:
+                    print()
 
 def getToken():
     reqHeaders = getHeader()
@@ -159,12 +157,13 @@ def getToken():
 
 
 def POST_CURL(api_url, reqHeaders, reqBody):
-    proxy_url = 'http://muaproxy_scMLA:IJ70V5KshM@103.214.44.131:11222'
+    proxy_url = 'http://user:pass@ip:post'
     proxies = {
         'http': proxy_url,
         'https': proxy_url,
     }
     try:
-        return requests.request("POST", api_url, headers=reqHeaders, data=reqBody, stream=True, proxies=proxies)
+        return requests.request("POST", api_url, headers=reqHeaders, data=reqBody, stream=True)
     except requests.exceptions.RequestException as e:
-        return(f"Request failed with error: {e}")
+        print(f"Lỗi Máy chủ rồi")
+        return

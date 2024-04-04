@@ -14,6 +14,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/send_message', methods=['POST'])
+
 def send_message():
     global time
     data = request.get_json()
@@ -21,6 +22,7 @@ def send_message():
         message = data['message']
         id = data['id']
         if(data['phien'] == "-1"):
+            Main.user_token = Main.getToken
             Main.NewChat_ChatGPT(message, id)
         else:
             Main.Chat_ChatGPT(message, id, data['phien'])
